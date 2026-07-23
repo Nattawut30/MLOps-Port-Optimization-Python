@@ -1,2 +1,15 @@
-# Port-Opt-Python
-Portfolio optimization with Time-Series forecasting and Monte Carlo simulations
+# <p align="center"> MLOps: Portfolio Optimization <p/>
+<br>**Nattawut Boonnoon**<br/>
+- LinkedIn: www.linkedin.com/in/nattawut-bn
+- Email: nattawut.boonnoon@hotmail.com
+
+***Overview***
+- 
+
+# <p align="center">Acknowledgments<p/>
+
+***Dependencies***
+- 
+
+***Academic Papers***
+-
