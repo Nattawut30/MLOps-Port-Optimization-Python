@@ -218,3 +218,7 @@ __marimo__/
 .streamlit/secrets.toml
 
 .idea/
+# MLflow local tracking database and run artifacts — redundant with
+# data/03_gold history, and grows unboundedly with every run
+mlruns/*.db
+mlruns/*/
