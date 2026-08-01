@@ -18,6 +18,7 @@ pyarrow = "<25.0.0"
 scipy = "^1.18.0"
 mlflow = "^3.15.0"
 pydantic-settings = "^2.14.2"
+requests = "^2.34.2"
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]
