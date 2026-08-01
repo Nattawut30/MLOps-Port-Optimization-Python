@@ -15,7 +15,6 @@ from typing import Literal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Project root: two levels up from this file (src/settings.py -> repo root)
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
 DATA_DIR = ROOT_DIR / "data"
@@ -42,10 +41,13 @@ class Settings(BaseSettings):
     mlflow_tracking_uri: str = f"file:{ROOT_DIR / 'mlruns'}"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
+    # Free key from alphavantage.co — required, no default on purpose,
+    # so a missing key fails loudly at startup instead of deep in extractor.py.
+    alpha_vantage_api_key: str
+
     @field_validator("tickers", mode="before")
     @classmethod
     def _split_tickers(cls, value: object) -> object:
-        """Allow TICKERS to arrive as a comma-separated string from .env."""
         if isinstance(value, str):
             tickers = [t.strip().upper() for t in value.split(",") if t.strip()]
             if not tickers:
@@ -71,6 +73,15 @@ class Settings(BaseSettings):
             )
         return rate
 
+    @field_validator("alpha_vantage_api_key")
+    @classmethod
+    def _real_key(cls, key: str) -> str:
+        if not key or key.strip().lower() in {"your_key_here", "changeme", ""}:
+            raise ValueError(
+                "ALPHA_VANTAGE_API_KEY is missing or a placeholder. "
+                "Get a free key at alphavantage.co and set it in .env."
+            )
+        return key
 
-# Import this everywhere; don't re-instantiate Settings() elsewhere.
+
 settings = Settings()
