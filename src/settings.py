@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     start_date: date = date(2020, 1, 1)
     end_date: date = date.today()
     risk_free_rate: float = 0.045
-    mlflow_tracking_uri: str = f"file:{ROOT_DIR / 'mlruns'}"
+    mlflow_tracking_uri: str = f"sqlite:///{ROOT_DIR / 'mlruns' / 'mlflow.db'}"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     # Free key from alphavantage.co — required, no default on purpose,
