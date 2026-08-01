@@ -49,3 +49,6 @@ run:
 # Launch the Streamlit dashboard locally on http://localhost:8501
 dashboard:
 	poetry run streamlit run src/streamlit_app.py
+# Launch the MLflow UI locally to browse past pipeline runs
+mlflow-ui:
+	poetry run mlflow ui --backend-store-uri file:./mlruns
