@@ -28,9 +28,11 @@ def test_log_returns_drops_first_row(sample_prices):
 
 
 def test_log_returns_raises_below_min_observations():
-    """Confirms the safety guard actually fires on too little data —
-    never triggered in a real run, worth proving it works."""
-    tiny_prices = pd.DataFrame({"A": [100, 101, 99]}, index=pd.date_range("2024-01-01", periods=3))
+    """Confirms the safety guard actually fires on too little data.
+    Built directly from MIN_OBSERVATIONS so this test stays correct
+    if that threshold ever changes."""
+    dates = pd.date_range("2024-01-01", periods=MIN_OBSERVATIONS)
+    tiny_prices = pd.DataFrame({"A": range(100, 100 + MIN_OBSERVATIONS)}, index=dates)
     with pytest.raises(ValueError, match="at least"):
         _log_returns(tiny_prices)
 
