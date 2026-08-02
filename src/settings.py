@@ -8,7 +8,7 @@ instead of 0.045) fail loudly at startup instead of silently, deep
 inside a scheduled pipeline run.
 """
 
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
         default_factory=lambda: ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]
     )
     start_date: date = date(2020, 1, 1)
-    end_date: date = date.today()
+    end_date: date = datetime.now(tz=timezone.utc).date()
     risk_free_rate: float = 0.045
     mlflow_tracking_uri: str = f"sqlite:///{ROOT_DIR / 'mlruns' / 'mlflow.db'}"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"

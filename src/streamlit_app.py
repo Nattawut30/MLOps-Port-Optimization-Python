@@ -28,15 +28,15 @@ BG = "#24273a"
 GRID = "#363a4f"
 TEXT = "#cad3f5"
 
-PLOTLY_LAYOUT = dict(
-    paper_bgcolor=BG,
-    plot_bgcolor=BG,
-    font=dict(color=TEXT, family="monospace", size=13),
-    margin=dict(l=40, r=20, t=40, b=40),
-    xaxis=dict(gridcolor=GRID, zerolinecolor=GRID),
-    yaxis=dict(gridcolor=GRID, zerolinecolor=GRID),
-    legend=dict(bgcolor="rgba(0,0,0,0)"),
-)
+PLOTLY_LAYOUT = {
+    "paper_bgcolor": BG,
+    "plot_bgcolor": BG,
+    "font": {"color": TEXT, "family": "monospace", "size": 13},
+    "margin": {"l": 40, "r": 20, "t": 40, "b": 40},
+    "xaxis": {"gridcolor": GRID, "zerolinecolor": GRID},
+    "yaxis": {"gridcolor": GRID, "zerolinecolor": GRID},
+    "legend": {"bgcolor": "rgba(0,0,0,0)"},
+}
 
 
 def safe_load(path: Path) -> pd.DataFrame | None:

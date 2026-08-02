@@ -76,7 +76,7 @@ class AlphaVantageDataSource:
                     StringIO(text), parse_dates=["timestamp"], index_col="timestamp"
                 )
                 return data["close"].sort_index()
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001 - retry loop must catch any failure mode
                 last_error = error
                 if attempt < self.max_retries:
                     time.sleep(self.retry_delay_seconds)

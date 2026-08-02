@@ -10,7 +10,15 @@ design established from the start of this project.
 import mlflow
 import pandas as pd
 
-from src import estimation, extractor, heston, optimization, output, processor, simulation
+from src import (
+    estimation,
+    extractor,
+    heston,
+    optimization,
+    output,
+    processor,
+    simulation,
+)
 from src.settings import GOLD_DIR, settings
 
 

@@ -117,7 +117,6 @@ def heston_fft_put_price(
 
     call_prices = np.exp(-alpha * log_strikes) / np.pi * np.real(np.fft.fft(integrand))
 
-    strikes = np.exp(log_strikes)
     call_at_k = np.interp(np.log(K), log_strikes, call_prices)
     # Put-call parity: Put = Call - S0 + K * exp(-rT) (zero dividend yield, disclosed)
     put_at_k = call_at_k - S0 + K * np.exp(-r * T)
