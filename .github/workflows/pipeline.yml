@@ -5,10 +5,35 @@ on:
     - cron: "0 6 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  placeholder:
+  run-pipeline:
     runs-on: ubuntu-latest
+    env:
+      ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
     steps:
       - uses: actions/checkout@v4
-      - name: Placeholder
-        run: echo "Pipeline will run extract, optimize, simulate once implemented."
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run pipeline
+        run: poetry run python -m src.pipeline
+
+      - name: Commit and push results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --staged --quiet || git commit -m "Automated pipeline run: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push
