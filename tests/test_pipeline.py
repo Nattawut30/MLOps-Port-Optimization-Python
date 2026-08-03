@@ -24,7 +24,7 @@ def test_run_calls_every_stage_in_order():
     fake_summary = pd.DataFrame([{
         "gbm_cvar_95": 0.3,
         "heston_cvar_95": 0.4,
-        "hedge_agreement_pct_diff": 1.5,
+        "hedge_mean_agreement_pct_diff": 1.5,
     }])
 
     with patch("src.pipeline.mlflow") as mock_mlflow, \
@@ -55,7 +55,7 @@ def test_run_logs_to_mlflow():
     fake_summary = pd.DataFrame([{
         "gbm_cvar_95": 0.3,
         "heston_cvar_95": 0.4,
-        "hedge_agreement_pct_diff": 1.5,
+        "hedge_mean_agreement_pct_diff": 1.5,
     }])
 
     with patch("src.pipeline.mlflow") as mock_mlflow, \

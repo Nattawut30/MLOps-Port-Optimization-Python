@@ -82,13 +82,14 @@ if all(x is None for x in [weights, expected_returns, risk_metrics, terminal_val
 
 if summary is not None:
     row = summary.iloc[0]
-    run_time = pd.to_datetime(row["run_timestamp_utc"]).strftime("%Y-%m-%d %H:%M UTC")
+    run_date = pd.to_datetime(row["run_timestamp_utc"]).strftime("%Y-%m-%d")
+    hedged_count = len(str(row["hedged_tickers"]).split(","))
     cols = st.columns(5)
-    cols[0].metric("Last run", run_time)
-    cols[1].metric("Hedged position", str(row["hedged_ticker"]))
+    cols[0].metric("Last run", run_date)
+    cols[1].metric("Hedged positions", str(hedged_count))
     cols[2].metric("GBM CVaR 95", f"{row['gbm_cvar_95']:.3f}")
     cols[3].metric("Heston CVaR 95", f"{row['heston_cvar_95']:.3f}")
-    cols[4].metric("Hedge agreement", f"{row['hedge_agreement_pct_diff']:.2f}%")
+    cols[4].metric("Avg hedge agreement", f"{row['hedge_mean_agreement_pct_diff']:.2f}%")
 
 st.divider()
 
@@ -101,9 +102,14 @@ with col_left:
         fig.add_bar(x=weights.index, y=weights["max_sharpe"], name="Max Sharpe", marker_color=ACCENT)
         fig.add_bar(x=weights.index, y=weights["risk_parity"], name="Risk Parity", marker_color=SECOND)
         fig.update_layout(**PLOTLY_LAYOUT, barmode="group", height=340)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, width="stretch")
         st.latex(r"\max_{w}\ \frac{w^T\mu - r_f}{\sqrt{w^T\Sigma w}} \quad \text{s.t.}\ \sum_i w_i = 1,\ w_i \geq 0")
         st.latex(r"w_i(\Sigma w)_i = w_j(\Sigma w)_j \quad \forall\, i, j")
+        st.caption(
+            "Max Sharpe weights for return per unit of risk. Risk parity "
+            "weights so each asset contributes the same amount of "
+            "portfolio risk."
+        )
     else:
         st.info("No weights available.")
 
@@ -114,9 +120,14 @@ with col_right:
         fig.add_bar(x=expected_returns.index, y=expected_returns["historical_mean"], name="Historical Mean", marker_color=SECOND)
         fig.add_bar(x=expected_returns.index, y=expected_returns["black_litterman"], name="Black-Litterman", marker_color=ACCENT)
         fig.update_layout(**PLOTLY_LAYOUT, barmode="group", height=340)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, width="stretch")
         st.latex(r"\pi = \delta \Sigma w_{mkt}")
         st.latex(r"E[R] = \left[(\tau\Sigma)^{-1} + P^T\Omega^{-1}P\right]^{-1}\left[(\tau\Sigma)^{-1}\pi + P^T\Omega^{-1}Q\right]")
+        st.caption(
+            "Black-Litterman starts from the return the market already "
+            "implies, then blends in investor views. Historical mean is "
+            "the plain average of past returns."
+        )
     else:
         st.info("No expected returns available.")
 
@@ -131,8 +142,13 @@ with col_left:
         fig.add_bar(x=["VaR 95", "CVaR 95"], y=[risk_metrics.loc["gbm", "var_95"], risk_metrics.loc["gbm", "cvar_95"]], name="GBM", marker_color=SECOND)
         fig.add_bar(x=["VaR 95", "CVaR 95"], y=[risk_metrics.loc["heston", "var_95"], risk_metrics.loc["heston", "cvar_95"]], name="Heston", marker_color=ACCENT)
         fig.update_layout(**PLOTLY_LAYOUT, barmode="group", height=340)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, width="stretch")
         st.latex(r"\text{VaR}_\alpha = \inf\{l : P(L > l) \leq 1-\alpha\} \qquad \text{CVaR}_\alpha = E[L \mid L \geq \text{VaR}_\alpha]")
+        st.caption(
+            "VaR is the loss not expected to be exceeded at the given "
+            "confidence level. CVaR is the average loss in the cases "
+            "beyond that point."
+        )
     else:
         st.info("No risk metrics available.")
 
@@ -143,9 +159,14 @@ with col_right:
         fig.add_histogram(x=terminal_values["gbm"], name="GBM", marker_color=SECOND, opacity=0.7, nbinsx=60)
         fig.add_histogram(x=terminal_values["heston"], name="Heston", marker_color=ACCENT, opacity=0.7, nbinsx=60)
         fig.update_layout(**PLOTLY_LAYOUT, barmode="overlay", height=340)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, width="stretch")
         st.latex(r"dS_t = \mu S_t\,dt + \sigma S_t\,dW_t")
         st.latex(r"dS_t = \mu S_t\,dt + \sqrt{v_t}\,S_t\,dW_t^S \qquad dv_t = \kappa(\theta - v_t)\,dt + \xi\sqrt{v_t}\,dW_t^v \qquad dW_t^S dW_t^v = \rho\,dt")
+        st.caption(
+            "GBM assumes constant volatility. Heston lets volatility move "
+            "randomly over time, which produces a wider spread of "
+            "outcomes."
+        )
     else:
         st.info("No simulation output available.")
 
@@ -153,18 +174,29 @@ st.divider()
 
 st.subheader("Tail Risk Hedge")
 if hedge is not None:
-    h = hedge.iloc[0]
-    cols = st.columns(4)
-    cols[0].metric("Spot", f"{h['spot']:.2f}")
-    cols[1].metric("Strike", f"{h['strike']:.2f}")
-    cols[2].metric("FFT price", f"{h['fft_put_price']:.4f}")
-    cols[3].metric("Monte Carlo price", f"{h['mc_put_price']:.4f}")
+    display = hedge[[
+        "hedged_ticker", "hedged_weight", "spot", "strike",
+        "fft_put_price", "mc_put_price", "fft_vs_mc_agreement_pct_diff",
+    ]].rename(columns={
+        "hedged_ticker": "Ticker",
+        "hedged_weight": "Weight",
+        "spot": "Spot",
+        "strike": "Strike",
+        "fft_put_price": "FFT Price",
+        "mc_put_price": "MC Price",
+        "fft_vs_mc_agreement_pct_diff": "Agreement %",
+    }).set_index("Ticker")
+    st.dataframe(display, width="stretch")
     st.latex(r"C(K) = \frac{e^{-\alpha k}}{\pi}\int_0^{\infty} e^{-ivk}\,\psi(v)\,dv")
     st.latex(r"P = C - S_0 + Ke^{-rT}")
-    params = pd.DataFrame(
-        {"value": [h["kappa"], h["theta"], h["v0"], h["vol_of_vol"], h["rho"]]},
-        index=["kappa", "theta", "v0", "vol_of_vol", "rho"],
+    st.caption(
+        "Each put is priced two independent ways, FFT and Monte Carlo, "
+        "and cross-checked against each other. Put-call parity converts "
+        "the FFT call price into a put price."
     )
-    st.dataframe(params, width='stretch')
+    params = hedge[["hedged_ticker", "kappa", "theta", "v0", "vol_of_vol", "rho"]].rename(
+        columns={"hedged_ticker": "Ticker"}
+    ).set_index("Ticker")
+    st.dataframe(params, width="stretch")
 else:
     st.info("No hedge data available.")

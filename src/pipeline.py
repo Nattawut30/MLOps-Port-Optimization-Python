@@ -63,7 +63,7 @@ def run() -> None:
             "max_sharpe_sharpe_ratio": _sharpe_of("max_sharpe"),
             "gbm_cvar_95": summary["gbm_cvar_95"],
             "heston_cvar_95": summary["heston_cvar_95"],
-            "hedge_fft_vs_mc_agreement_pct_diff": summary["hedge_agreement_pct_diff"],
+            "hedge_fft_vs_mc_agreement_pct_diff": summary["hedge_mean_agreement_pct_diff"],
         })
         mlflow.log_artifact(str(summary_path))
 

@@ -1,22 +1,28 @@
 """
-Prices a protective put on the portfolio's largest holding using the Heston
-model, then shows how adding that hedge changes the portfolio's simulated
-risk profile.
+Prices a protective put on every ticker in the portfolio using the Heston
+model, and shows how each hedge relates to the portfolio's simulated risk
+profile.
 
 Pricing uses the risk-neutral rate (settings.risk_free_rate) for discounting
-and drift — NOT the real-world Black-Litterman expected return used in
+and drift, not the real-world Black-Litterman expected return used in
 simulation.py. This is a deliberate, important distinction: simulation.py
-answers "what might actually happen"; this file answers "what is the
-no-arbitrage price today." Conflating the two would produce a price with
-no theoretical grounding.
+answers what might actually happen, this file answers what the no-arbitrage
+price is today. Conflating the two would produce a price with no
+theoretical grounding.
 
-Two independent pricing methods (Carr-Madan FFT and Monte Carlo) are run on
-the same Heston parameters and checked against each other — that agreement
-is the self-consistency test promised when Heston was first scoped into
-this project. theta, v0, and vol-of-vol are estimated from the largest
-holding's own historical returns; kappa and rho are the same literature-
-convention defaults used in simulation.py (fitting them to a live options
-market would require a paid data feed).
+This originally hedged only the portfolio's single largest holding, since
+real portfolios rarely hedge every position individually, each option has
+a real premium, and diversification across names already reduces risk for
+free. Extended to hedge every ticker on request, at the cost of five times
+the calibration and Monte Carlo work per pipeline run.
+
+Two independent pricing methods, Carr-Madan FFT and Monte Carlo, are run
+on the same Heston parameters for each ticker and checked against each
+other, the self-consistency test promised when Heston was first scoped
+into this project. theta, v0, and vol-of-vol are estimated from each
+ticker's own historical returns, kappa and rho are the same literature
+convention defaults used in simulation.py, since fitting them to a live
+options market would require a paid data feed.
 """
 
 from pathlib import Path
@@ -28,11 +34,11 @@ import torch
 from src.settings import BRONZE_DIR, GOLD_DIR, SILVER_DIR, settings
 
 TRADING_DAYS_PER_YEAR = 252
-HESTON_KAPPA = 3.0   # must match simulation.py's convention default
-HESTON_RHO = -0.7    # must match simulation.py's convention default
+HESTON_KAPPA = 3.0
+HESTON_RHO = -0.7
 RECENT_WINDOW = 20
 N_MC_PATHS = 20_000
-HORIZON_DAYS = TRADING_DAYS_PER_YEAR  # 1-year option
+HORIZON_DAYS = TRADING_DAYS_PER_YEAR
 
 
 def _get_device() -> torch.device:
@@ -45,7 +51,7 @@ def calibrate_heston(returns: pd.Series) -> dict:
     """Estimate Heston volatility parameters from historical data.
 
     Only volatility parameters come from data. kappa and rho are literature
-    defaults — the same disclosed simplification made in simulation.py.
+    defaults, the same disclosed simplification made in simulation.py.
     """
     theta = float(returns.var() * TRADING_DAYS_PER_YEAR)
     v0 = float(returns.tail(RECENT_WINDOW).var() * TRADING_DAYS_PER_YEAR)
@@ -66,8 +72,8 @@ def calibrate_heston(returns: pd.Series) -> dict:
 def _heston_char_function(
     u: np.ndarray, S0: float, T: float, r: float, params: dict
 ) -> np.ndarray:
-    """Heston characteristic function of log(S_T), "little trap" form
-    (Albrecher et al.) — avoids the branch-cut discontinuities that make
+    """Heston characteristic function of log(S_T), little trap form
+    (Albrecher et al.), avoids the branch-cut discontinuities that make
     the original Heston (1993) formulation numerically unstable."""
     kappa, theta, sigma_v, rho, v0 = (
         params["kappa"], params["theta"], params["vol_of_vol"],
@@ -96,8 +102,7 @@ def heston_fft_put_price(
     """European put price via the Carr-Madan (1999) FFT method.
 
     Prices a call across a grid of strikes via one FFT call, then converts
-    to a put via put-call parity — the standard, well-documented approach,
-    avoiding a separate put-specific Fourier derivation.
+    to a put via put-call parity, the standard, well-documented approach.
     """
     lambda_ = 2 * np.pi / (n * eta)
     b = n * lambda_ / 2
@@ -110,7 +115,6 @@ def heston_fft_put_price(
     denominator = alpha**2 + alpha - u**2 + i * (2 * alpha + 1) * u
     psi = np.exp(-r * T) * phi / denominator
 
-    # Simpson's rule weighting for FFT accuracy (Carr-Madan convention)
     simpson_weights = (3 + (-1) ** (np.arange(n) + 1))
     simpson_weights[0] = 1
     integrand = np.exp(i * b * u) * psi * eta * simpson_weights / 3
@@ -118,7 +122,6 @@ def heston_fft_put_price(
     call_prices = np.exp(-alpha * log_strikes) / np.pi * np.real(np.fft.fft(integrand))
 
     call_at_k = np.interp(np.log(K), log_strikes, call_prices)
-    # Put-call parity: Put = Call - S0 + K * exp(-rT) (zero dividend yield, disclosed)
     put_at_k = call_at_k - S0 + K * np.exp(-r * T)
     return float(max(put_at_k, 0.0))
 
@@ -127,20 +130,18 @@ def heston_mc_put_price(
     S0: float, K: float, T: float, r: float, params: dict,
     n_paths: int = N_MC_PATHS, seed: int = 7,
 ) -> float:
-    """Risk-neutral Monte Carlo put price — the independent cross-check
-    against the FFT price above. Drift is r, the risk-free rate, NOT any
-    real-world expected return; this is a no-arbitrage pricing simulation,
-    not a real-world outcome simulation like simulation.py's."""
+    """Risk-neutral Monte Carlo put price, the independent cross-check
+    against the FFT price above. Drift is r, the risk-free rate, not any
+    real-world expected return."""
     device = _get_device()
     generator = torch.Generator(device="cpu").manual_seed(seed)
     horizon_days = int(T * TRADING_DAYS_PER_YEAR)
     dt = 1.0 / TRADING_DAYS_PER_YEAR
 
-    kappa, theta, sigma_v, rho = (
-        params["kappa"], params["vol_of_vol"] and params["theta"],
-        params["vol_of_vol"], params["rho"],
-    )
+    kappa = params["kappa"]
     theta = params["theta"]
+    sigma_v = params["vol_of_vol"]
+    rho = params["rho"]
 
     s = torch.full((n_paths,), float(S0), device=device)
     v = torch.full((n_paths,), float(params["v0"]), device=device)
@@ -160,27 +161,24 @@ def heston_mc_put_price(
     return float(price.cpu())
 
 
-def price_hedge() -> dict:
-    """Price a 1-year, at-the-money protective put on the portfolio's
-    largest max_sharpe holding, and cross-check the price two ways."""
-    prices = pd.read_parquet(BRONZE_DIR / "prices.parquet")
-    returns = pd.read_parquet(SILVER_DIR / "returns.parquet")
-    weights = pd.read_parquet(GOLD_DIR / "weights.parquet")["max_sharpe"]
-
-    largest_ticker = weights.idxmax()
-    S0 = float(prices[largest_ticker].iloc[-1])
-    K = S0  # at-the-money
+def price_hedge(
+    ticker: str, weights: pd.Series, prices: pd.DataFrame, returns: pd.DataFrame
+) -> dict:
+    """Price a 1-year, at-the-money protective put on one ticker, and
+    cross-check the price two ways."""
+    S0 = float(prices[ticker].iloc[-1])
+    K = S0
     T = 1.0
     r = settings.risk_free_rate
 
-    params = calibrate_heston(returns[largest_ticker])
+    params = calibrate_heston(returns[ticker])
     fft_price = heston_fft_put_price(S0, K, T, r, params)
     mc_price = heston_mc_put_price(S0, K, T, r, params)
     agreement_pct = abs(fft_price - mc_price) / fft_price * 100 if fft_price > 0 else float("nan")
 
     return {
-        "hedged_ticker": largest_ticker,
-        "hedged_weight": float(weights[largest_ticker]),
+        "hedged_ticker": ticker,
+        "hedged_weight": float(weights[ticker]),
         "spot": S0,
         "strike": K,
         "maturity_years": T,
@@ -192,17 +190,23 @@ def price_hedge() -> dict:
 
 
 def run() -> Path:
-    result = price_hedge()
+    """Price a hedge on every ticker in the portfolio, one row each."""
+    prices = pd.read_parquet(BRONZE_DIR / "prices.parquet")
+    returns = pd.read_parquet(SILVER_DIR / "returns.parquet")
+    weights = pd.read_parquet(GOLD_DIR / "weights.parquet")["max_sharpe"]
+
+    results = [
+        price_hedge(ticker, weights, prices, returns) for ticker in weights.index
+    ]
+
     output_path = GOLD_DIR / "heston_hedge.parquet"
-    pd.DataFrame([result]).to_parquet(output_path)
+    pd.DataFrame(results).to_parquet(output_path)
     return output_path
 
 
 if __name__ == "__main__":
     path = run()
-    result = pd.read_parquet(path).iloc[0]
-    print(f"Hedged ticker: {result['hedged_ticker']} (largest holding, weight {result['hedged_weight']:.1%})")
-    print(f"FFT put price:  {result['fft_put_price']:.4f}")
-    print(f"MC put price:   {result['mc_put_price']:.4f}")
-    print(f"Agreement:      {result['fft_vs_mc_agreement_pct_diff']:.2f}% difference")
+    result = pd.read_parquet(path)
+    print(f"Priced hedges for {len(result)} tickers.")
+    print(result[["hedged_ticker", "fft_put_price", "mc_put_price", "fft_vs_mc_agreement_pct_diff"]])
     print(f"Wrote {path}")
