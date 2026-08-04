@@ -6,9 +6,34 @@ on:
   workflow_dispatch:
 
 jobs:
-  ping:
+  wake:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping the deployed app
+      - name: Install Playwright
         run: |
-          curl -sS -o /dev/null -w "HTTP %{http_code}\n" https://nattawut-port.streamlit.app/
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Visit the app and wake it if asleep
+        run: |
+          python - << 'PYEOF'
+          from playwright.sync_api import sync_playwright
+
+          URL = "https://nattawut-port.streamlit.app/"
+
+          with sync_playwright() as p:
+              browser = p.chromium.launch()
+              page = browser.new_page()
+              page.goto(URL, wait_until="domcontentloaded", timeout=120_000)
+              page.wait_for_timeout(5_000)
+
+              wake_button = page.get_by_role("button", name="Yes, get this app back up!")
+              if wake_button.count() > 0:
+                  print("App was asleep. Clicking wake button.")
+                  wake_button.click()
+                  page.wait_for_timeout(60_000)
+              else:
+                  print("App is already awake.")
+
+              browser.close()
+          PYEOF
