@@ -97,12 +97,23 @@ Monte Carlo, cross-checked against each other on every run.
 $$P = C - S_0 + Ke^{-rT}$$
 
 Put-call parity, converting the FFT call price into a put price.
-  
 
 # <p align="center">Acknowledgments<p/>
 
 ***Dependencies***
 - 
+`Streamlit` · `Pandas` · `Numpy` · `Plotly` · `Scikit-Learn` · `PyTorch` · `MLFlow` · `PyArrow` · `SciPy`
 
 ***Academic Papers & References***
 -
+
+- Markowitz, H. (1952). *"Portfolio Selection."* The Journal of Finance, 7(1), 77-91.
+- Black, F., & Scholes, M. (1973). *"The Pricing of Options and Corporate Liabilities."* Journal of Political Economy, 81(3), 637-654.
+- Sharpe, W. F. (1966). *"Mutual Fund Performance."* The Journal of Business, 39(1), 119-138.
+- Black, F., & Litterman, R. (1992). *"Global Portfolio Optimization."* Financial Analysts Journal, 48(5), 28-43.
+- Ledoit, O., & Wolf, M. (2004). *"A Well-Conditioned Estimator for Large-Dimensional Covariance Matrices."* Journal of Multivariate Analysis, 88(2), 365-411.
+- Heston, S. L. (1993). *"A Closed-Form Solution for Options with Stochastic Volatility with Applications to Bond and Currency Options."* The Review of Financial Studies, 6(2), 327-343.
+- Carr, P., & Madan, D. (1999). *"Option Valuation Using the Fast Fourier Transform."* Journal of Computational Finance, 2(4), 61-73.
+- Maillard, S., Roncalli, T., & Teiletche, J. (2010). *"The Properties of Equally Weighted Risk Contribution Portfolios."* The Journal of Portfolio Management, 36(4), 60-70.
+- Rockafellar, R. T., & Uryasev, S. (2000). *"Optimization of Conditional Value-at-Risk."* Journal of Risk, 2(3), 21-41.
+- Howell, E., (2025), *"Modern Boiler plate to build an end-to-end ML project".,* ML-Project-Starter.
