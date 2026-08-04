@@ -39,6 +39,7 @@ PLOTLY_LAYOUT = {
 }
 
 
+@st.cache_data(ttl=3600)
 def safe_load(path: Path) -> pd.DataFrame | None:
     if not path.exists():
         return None
