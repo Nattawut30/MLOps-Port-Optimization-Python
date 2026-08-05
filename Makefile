@@ -2,12 +2,12 @@
 
 # Install runtime dependencies only (used in production / CI deploys).
 install:
-	poetry install --without dev
+	poetry install --with pipeline --without dev
 
 # Install everything, including dev tools (linters, type checker, pytest).
 # Use this on your local machine when developing.
 install-dev:
-	poetry install
+	poetry install --with pipeline
 
 # Check code style without making changes. Fails if anything would be reformatted.
 lint:

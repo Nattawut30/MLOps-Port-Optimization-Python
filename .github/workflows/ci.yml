@@ -33,7 +33,7 @@ jobs:
           key: poetry-${{ hashFiles('poetry.lock') }}
 
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --with pipeline
 
       - name: Lint
         run: poetry run ruff check .
