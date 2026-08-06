@@ -62,14 +62,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("Portfolio Optimization")
-st.markdown(
-    "Created by Nattawut Boonnoon &nbsp;&middot;&nbsp; "
-    "[GitHub](https://github.com/Nattawut30) &nbsp;&middot;&nbsp; "
-    "[LinkedIn](https://www.linkedin.com/in/nattawut-bn/)"
-)
-st.divider()
-
 weights = safe_load(GOLD_DIR / "weights.parquet")
 expected_returns = safe_load(SILVER_DIR / "expected_returns.parquet")
 risk_metrics = safe_load(GOLD_DIR / "risk_metrics.parquet")
@@ -81,16 +73,29 @@ if all(x is None for x in [weights, expected_returns, risk_metrics, terminal_val
     st.info("No pipeline output found. Run the pipeline first.")
     st.stop()
 
+header_left, header_right = st.columns([3, 1])
+with header_left:
+    st.title("Portfolio Optimization")
+    st.markdown(
+        "Created by Nattawut Boonnoon &nbsp;&middot;&nbsp; "
+        "[GitHub](https://github.com/Nattawut30) &nbsp;&middot;&nbsp; "
+        "[LinkedIn](https://www.linkedin.com/in/nattawut-bn/)"
+    )
+with header_right:
+    if summary is not None:
+        run_date = pd.to_datetime(summary.iloc[0]["run_timestamp_utc"]).strftime("%Y-%m-%d")
+        st.metric("Last run", run_date)
+
+st.divider()
+
 if summary is not None:
     row = summary.iloc[0]
-    run_date = pd.to_datetime(row["run_timestamp_utc"]).strftime("%Y-%m-%d")
     hedged_count = len(str(row["hedged_tickers"]).split(","))
-    cols = st.columns(5)
-    cols[0].metric("Last run", run_date)
-    cols[1].metric("Hedged positions", str(hedged_count))
-    cols[2].metric("GBM CVaR 95", f"{row['gbm_cvar_95']:.3f}")
-    cols[3].metric("Heston CVaR 95", f"{row['heston_cvar_95']:.3f}")
-    cols[4].metric("Avg hedge agreement", f"{row['hedge_mean_agreement_pct_diff']:.2f}%")
+    cols = st.columns(4)
+    cols[0].metric("Hedged positions", str(hedged_count))
+    cols[1].metric("GBM CVaR 95", f"{row['gbm_cvar_95']:.3f}")
+    cols[2].metric("Heston CVaR 95", f"{row['heston_cvar_95']:.3f}")
+    cols[3].metric("Avg hedge agreement", f"{row['hedge_mean_agreement_pct_diff']:.2f}%")
 
 st.divider()
 
