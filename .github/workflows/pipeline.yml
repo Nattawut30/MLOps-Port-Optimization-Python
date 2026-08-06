@@ -44,3 +44,18 @@ jobs:
             data/03_gold/run_summary.parquet \
             --title "Latest pipeline run" \
             --notes "Automated data refresh: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - name: Heartbeat commit (keeps the schedule from being auto-disabled)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          echo "Last automated run: $(date -u +%Y-%m-%dT%H:%M:%SZ)" > .heartbeat
+          git add .heartbeat
+          git diff --staged --quiet && exit 0
+          if [ "$(git log -1 --format='%an')" = "github-actions[bot]" ]; then
+            git commit --amend -m "Heartbeat: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push --force-with-lease origin main
+          else
+            git commit -m "Heartbeat: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push origin main
+          fi
