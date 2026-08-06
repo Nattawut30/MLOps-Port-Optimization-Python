@@ -17,12 +17,13 @@ The pipeline runs in two separate stages.
 
 A scheduled batch job (GitHub Actions) extracts prices, computes returns
 and covariance, estimates expected returns, optimizes portfolio weights,
-simulates risk, and prices a tail risk hedge. Results are committed back
-to this repository rather than stored in a hosted database, giving every
-run a permanent, versioned record in git history.
+simulates risk, and prices a tail risk hedge. Results are published to
+the repository's "latest" GitHub Release rather than committed to git —
+each run overwrites the same release assets in place, so repo size and
+commit count stay constant no matter how often the pipeline runs.
 
-A Streamlit dashboard reads only the finished output of that job. It
-never recomputes anything and never touches the data source.
+A Streamlit dashboard fetches only the finished output of that job. It
+never recomputes anything and never touches the data source directly.
 
 Data moves through three layers on disk. (Bronze -> Silver -> Gold)
 

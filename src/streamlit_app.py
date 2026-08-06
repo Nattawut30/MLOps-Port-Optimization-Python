@@ -3,24 +3,43 @@ Dashboard. Facade over the gold and silver layers only.
 
 This file never imports from settings.py and never calls extractor,
 processor, estimation, optimization, simulation, or heston directly.
-It reads finished parquet artifacts and renders them. No computation
+It fetches finished parquet artifacts and renders them. No computation
 happens here, matching the two-plane design used throughout this
 project: compute runs on a schedule, serving stays thin.
+
+Data comes from the repo's "latest" GitHub Release rather than files
+committed to git — the pipeline overwrites those release assets every
+run, so freshness no longer depends on a git push or a dashboard
+redeploy. Local files under data/ are a fallback only, for offline
+development.
 
 Paths are defined locally rather than imported from settings.py,
 since Settings() requires a live Alpha Vantage key to instantiate,
 and this file never needs that key.
 """
 
+import io
 from pathlib import Path
 
 import pandas as pd
 import plotly.graph_objects as go
+import requests
 import streamlit as st
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 SILVER_DIR = ROOT_DIR / "data" / "02_silver"
 GOLD_DIR = ROOT_DIR / "data" / "03_gold"
+
+# The daily pipeline no longer commits data/ to git — it uploads to this
+# release instead, overwriting the same assets in place every run. That
+# keeps the repo's size and commit count flat forever, at any pipeline
+# frequency. Local files under data/ are kept only as a fallback for
+# offline development and the rare moment mid-refresh when the release
+# is briefly being recreated.
+RELEASE_BASE_URL = (
+    "https://github.com/Nattawut30/MLOps-Portfolio-Optimization-Python"
+    "/releases/download/latest"
+)
 
 ACCENT = "#c6a0f6"
 SECOND = "#8aadf4"
@@ -40,10 +59,15 @@ PLOTLY_LAYOUT = {
 
 
 @st.cache_data(ttl=3600)
-def safe_load(path: Path) -> pd.DataFrame | None:
-    if not path.exists():
+def safe_load(filename: str, local_path: Path) -> pd.DataFrame | None:
+    try:
+        response = requests.get(f"{RELEASE_BASE_URL}/{filename}", timeout=10)
+        response.raise_for_status()
+        return pd.read_parquet(io.BytesIO(response.content))
+    except requests.RequestException:
+        if local_path.exists():
+            return pd.read_parquet(local_path)
         return None
-    return pd.read_parquet(path)
 
 
 st.set_page_config(page_title="Portfolio Optimization", layout="wide")
@@ -62,12 +86,12 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-weights = safe_load(GOLD_DIR / "weights.parquet")
-expected_returns = safe_load(SILVER_DIR / "expected_returns.parquet")
-risk_metrics = safe_load(GOLD_DIR / "risk_metrics.parquet")
-terminal_values = safe_load(GOLD_DIR / "simulation_terminal_values.parquet")
-hedge = safe_load(GOLD_DIR / "heston_hedge.parquet")
-summary = safe_load(GOLD_DIR / "run_summary.parquet")
+weights = safe_load("weights.parquet", GOLD_DIR / "weights.parquet")
+expected_returns = safe_load("expected_returns.parquet", SILVER_DIR / "expected_returns.parquet")
+risk_metrics = safe_load("risk_metrics.parquet", GOLD_DIR / "risk_metrics.parquet")
+terminal_values = safe_load("simulation_terminal_values.parquet", GOLD_DIR / "simulation_terminal_values.parquet")
+hedge = safe_load("heston_hedge.parquet", GOLD_DIR / "heston_hedge.parquet")
+summary = safe_load("run_summary.parquet", GOLD_DIR / "run_summary.parquet")
 
 if all(x is None for x in [weights, expected_returns, risk_metrics, terminal_values, hedge, summary]):
     st.info("No pipeline output found. Run the pipeline first.")

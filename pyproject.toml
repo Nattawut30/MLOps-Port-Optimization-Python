@@ -12,6 +12,7 @@ streamlit = "^1.60.0"
 pandas = "<3.0.0"
 plotly = "^6.9.0"
 pyarrow = "<25.0.0"
+requests = "^2.34.2"
 
 [tool.poetry.group.pipeline]
 optional = true
@@ -23,7 +24,6 @@ torch = "^2.13.0"
 scipy = "^1.18.0"
 mlflow = "^3.15.0"
 pydantic-settings = "^2.14.2"
-requests = "^2.34.2"
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]
