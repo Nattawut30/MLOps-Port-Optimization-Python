@@ -15,8 +15,6 @@ jobs:
       ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -46,12 +44,3 @@ jobs:
             data/03_gold/run_summary.parquet \
             --title "Latest pipeline run" \
             --notes "Automated data refresh: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
-      - name: Heartbeat commit (safe, no force)
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          echo "Last automated run: $(date -u +%Y-%m-%dT%H:%M:%SZ)" > .heartbeat
-          git add .heartbeat
-          git diff --staged --quiet || git commit -m "Heartbeat: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          git push origin HEAD:main
