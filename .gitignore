@@ -222,3 +222,4 @@ __marimo__/
 # data/03_gold history, and grows unboundedly with every run
 mlruns/*.db
 mlruns/*/
+data/
